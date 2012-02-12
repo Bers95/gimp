@@ -1,69 +1,8 @@
-#### options:
-# Use the following --with/--without <option> switches to control how the
-# package will be built:
-# 
-# lcms:        lcms support
-%bcond_without lcms
-# python:      python support
-%bcond_without python
-# mp:          multi processor support
-%bcond_without mp
-# static:      build static libraries
-%bcond_with static
-# print:       build the print plugin (if you don't build it externally)
-%bcond_without print
-# gutenprint:  require gutenprint-plugin (instead of gimp-print-plugin) if
-#              internal print plugin isn't built
-%bcond_without gutenprint
-# convenience: install convenience symlinks
-%bcond_without convenience
-# gudev:       use gudev to discover special input devices
-%if ! 0%{?fedora}%{?rhel} || 0%{?fedora} >= 15 || 0%{?rhel} >= 7
-# use gudev from F-15/RHEL7 on
-%bcond_without gudev
-%else
-%bcond_with gudev
-%endif
-# aalib:       build with AAlib (ASCII art gfx library)
-%if 0%{?rhel}
-# don't use aalib on RHEL
-%bcond_with aalib
-%else
-%bcond_without aalib
-%endif
-# hardening:   use various compiler/linker flags to harden binaries against
-#              certain types of exploits
-%bcond_without hardening
-# Reset this once poppler picks up the updated xpdf version of "GPLv2 or GPLv3"
-%bcond_with poppler
-
-
 Summary:        GNU Image Manipulation Program
 Name:           gimp
 Epoch:          2
-Version:        2.7.4
+Version:        2.8.0
 Release:        2%{?dist}
-
-# Set this to 0 in stable, 1 in unstable releases
-%global unstable 1
-
-# Compute some version related macros
-# Ugly hack, you need to get your quoting backslashes/percent signs straight
-%global major %(ver=%version; echo ${ver%%%%.*})
-%global minor %(ver=%version; ver=${ver#%major.}; echo ${ver%%%%.*})
-%global micro %(ver=%version; ver=${ver#%major.%minor.}; echo ${ver%%%%.*})
-%global binver %major.%minor
-%global interface_age 0
-%global gettext_version 20
-%global lib_api_version 2.0
-%if ! %unstable
-%global lib_minor %(echo $[%minor * 100])
-%global lib_micro %micro
-%else # unstable
-%global lib_minor %(echo $[%minor * 100 + %micro])
-%global lib_micro 0
-%endif # unstable
-
 License:        GPLv3+
 Group:          Applications/Multimedia
 URL:            http://www.gimp.org/
@@ -71,9 +10,7 @@ BuildRoot:      %{_tmppath}/%{name}-%{version}-root-%(%__id_u -n)
 Obsoletes:      gimp-perl < 2:2.0
 Obsoletes:      gimp < 2:2.6.0-3
 BuildRequires:  chrpath >= 0.13-5
-%if %{with aalib}
 BuildRequires:  aalib-devel
-%endif
 BuildRequires:  alsa-lib-devel >= 1.0.0
 BuildRequires:  babl-devel >= 0.1.6
 BuildRequires:  cairo-devel >= 1.10.2
@@ -88,16 +25,10 @@ BuildRequires:  gnome-keyring-devel >= 0.4.5
 BuildRequires:  gtk2-devel >= 2.24.7
 BuildRequires:  gtk-doc >= 1.0
 BuildRequires:  jasper-devel
-%if %{with lcms}
 BuildRequires:  lcms-devel >= 1.16
-%endif
 BuildRequires:  libexif-devel >= 0.6.15
 BuildRequires:  libgnomeui-devel >= 2.10.0
-%if %{with gudev}
 BuildRequires:  libgudev1-devel >= 167
-%else
-BuildRequires:  hal-devel >= 0.5.7
-%endif
 BuildRequires:  libjpeg-devel
 BuildRequires:  libmng-devel
 BuildRequires:  libpng-devel >= 1.2.37
@@ -105,21 +36,12 @@ BuildRequires:  librsvg2-devel >= 2.34.2
 BuildRequires:  libtiff-devel
 BuildRequires:  libwmf-devel >= 0.2.8
 BuildRequires:  pango-devel >= 1.29.4
-%if %{with poppler}
-%if 0%{?fedora}%{?rhel} == 0 || 0%{?fedora} > 8 || 0%{?rhel} > 5
 BuildRequires:  poppler-glib-devel >= 0.12.4
-%else
 BuildRequires:  poppler-devel >= 0.12.4
-%endif
-%endif
 BuildRequires:  python-devel
 BuildRequires:  pygtk2-devel >= 2.10.4
 BuildRequires:  pygobject2-devel
-%if 0%{?fedora}%{?rhel} == 0 || 0%{?fedora} > 10 || 0%{?rhel} > 5
 BuildRequires:  webkitgtk-devel >= 1.6.1
-%else
-BuildRequires:  WebKit-gtk-devel >= 1.6.1
-%endif
 BuildRequires:  libX11-devel
 BuildRequires:  libXmu-devel
 BuildRequires:  libXpm-devel
@@ -133,13 +55,6 @@ Requires:       gtk2 >= 2.24.7
 Requires:       pango >= 1.29.4
 Requires:       freetype >= 2.1.7
 Requires:       fontconfig >= 2.2.0
-%if ! %{with print}
-%if %{with gutenprint}
-Requires:       gutenprint-plugin
-%else
-Requires:       gimp-print-plugin
-%endif
-%endif
 Requires:       hicolor-icon-theme
 Requires:       pygtk2 >= 2.10.4
 Requires:       xdg-utils
@@ -202,89 +117,36 @@ The gimp-help-browser package contains a lightweight help browser plugin for
 viewing GIMP online help.
 
 %prep
-cat << EOF
---- 8< --- Build options ---------------------------------------------------
-LCMS support:                 %{with lcms}
-Python support:               %{with python}
-MP support:                   %{with mp}
-build static libs:            %{with static}
-build internal print plugin:  %{with print}
-include convenience symlinks: %{with convenience}
-build the print plugin:       %{with print}
-use gudev:                    %{with gudev}
-%if ! %{with print}
-prefer gutenprint over (external) gimp-print plugin:
-                              %{with gutenprint}
-%endif
-build ASCII art plugin        %{with aalib}
-harden binaries:              %{with hardening}
-use poppler:                  %{with poppler}
---- >8 ---------------------------------------------------------------------
-EOF
-
 %setup -q -n gimp-%{version}
 
 %build
-%if %{with hardening}
-# Use hardening compiler/linker flags because gimp is likely to deal with files
-# coming from untrusted sources
-%if ! 0%{?fedora}%{?rhel} || 0%{?fedora} >= 16 || 0%{?rhel} >= 7
-%global _hardened_build 1
-%else
-# fake things
-export CFLAGS='-fPIC %optflags'
-export CXXFLAGS='-fPIC %optflags'
-export LDFLAGS='-pie'
-%endif
-%endif
 %configure \
-%if %{with python}
     --enable-python \
-%else
     --disable-python \
-%endif
-%if %{with mp}
     --enable-mp \
-%else
-    --disable-mp \
-%endif
-%if %{with static}
-    --enable-static \
-%else
     --disable-static \
-%endif
-%if %{with print}
     --with-print \
-%else
-    --without-print \
-%endif
-%if %{with lcms}
     --with-lcms \
-%else
     --without-lcms \
-%endif
     --enable-gimp-console \
-%if %{with aalib}
     --with-aa \
-%else
-    --without-aa \
-%endif
-%if %{with gudev}
     --with-gudev --without-hal \
-%else
-    --with-hal --without-gudev \
-%endif
-%ifos linux
     --with-linux-input \
-%endif
-%if use_poppler
     --with-poppler \
-%else
-    --without-poppler \
-%endif
-    --with-libtiff --with-libjpeg --with-libpng --with-libmng --with-libjasper \
-    --with-libexif --with-librsvg --with-libxpm --with-gvfs --with-alsa \
-    --with-webkit --with-dbus --with-script-fu --with-cairo-pdf
+    --with-libtiff \
+    --with-libjpeg \
+    --with-libpng \
+    --with-libmng \
+    --with-libjasper \
+    --with-libexif \
+    --with-librsvg \
+    --with-libxpm \
+    --with-gvfs \
+    --with-alsa \
+    --with-webkit \
+    --with-dbus \
+    --with-script-fu \
+    --with-cairo-pdf
 
 make %{?_smp_mflags}
 
@@ -338,7 +200,6 @@ cat gimp%{gettext_version}.lang gimp%{gettext_version}-std-plug-ins.lang gimp%{g
 #
 cat gimp-plugin-files gimp-all.lang > gimp.files
 
-%if %{with convenience}
 # install convenience symlinks
 ln -snf gimp-%{binver} %{buildroot}%{_bindir}/gimp
 ln -snf gimp-%{binver}.1 %{buildroot}%{_mandir}/man1/gimp.1
@@ -347,7 +208,6 @@ ln -snf gimp-console-%{binver}.1 %{buildroot}/%{_mandir}/man1/gimp-console.1
 ln -snf gimptool-%{lib_api_version} %{buildroot}%{_bindir}/gimptool
 ln -snf gimptool-%{lib_api_version}.1 %{buildroot}%{_mandir}/man1/gimptool.1
 ln -snf gimprc-%{binver}.5 %{buildroot}/%{_mandir}/man5/gimprc.5
-%endif
 
 %clean
 rm -rf %{buildroot}
@@ -419,20 +279,16 @@ gtk-update-icon-cache %{_datadir}/icons/hicolor &>/dev/null || :
 %{_bindir}/gimp-%{binver}
 %{_bindir}/gimp-console-%{binver}
 
-%if %{with convenience}
 %{_bindir}/gimp
 %{_bindir}/gimp-console
-%endif
 
 %{_mandir}/man1/gimp-%{binver}.1*
 %{_mandir}/man1/gimp-console-%{binver}.1*
 %{_mandir}/man5/gimprc-%{binver}.5*
 
-%if %{with convenience}
 %{_mandir}/man1/gimp.1*
 %{_mandir}/man1/gimp-console.1*
 %{_mandir}/man5/gimprc.5*
-%endif
 
 %{_datadir}/icons/hicolor/*/apps/gimp.png
 
@@ -484,10 +340,8 @@ gtk-update-icon-cache %{_datadir}/icons/hicolor &>/dev/null || :
 %{_bindir}/gimptool-%{lib_api_version}
 %{_mandir}/man1/gimptool-%{lib_api_version}.1*
 
-%if %{with convenience}
 %{_bindir}/gimptool
 %{_mandir}/man1/gimptool.1*
-%endif
 
 %files help-browser
 %defattr (-, root, root, 0755)
