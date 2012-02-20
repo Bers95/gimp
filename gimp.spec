@@ -120,6 +120,7 @@ viewing GIMP online help.
 %setup -q -n gimp-%{version}
 
 %build
+./autogen.sh
 %configure \
     --enable-python \
     --disable-python \
